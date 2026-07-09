@@ -1,0 +1,229 @@
+// ============================================================
+// ROCKET PERPS STRATEGY — Defi App / Aark Digital
+// Oracle-based | 1000x leverage | Short-duration trades
+// Designed for 1m / 3m charts
+// ============================================================
+
+//@version=5
+strategy(
+     title             = "Rocket Perps Strategy [DefiApp]",
+     shorttitle        = "RKTPERPS",
+     overlay           = true,
+     initial_capital   = 1000,
+     default_qty_type  = strategy.percent_of_equity,
+     default_qty_value = 5,
+     commission_type   = strategy.commission.percent,
+     commission_value  = 4.0,
+     slippage          = 0,
+     max_bars_back     = 500)
+
+// ─────────────────────────────────────────────────────────────
+// ░░  INPUTS
+// ─────────────────────────────────────────────────────────────
+grp_signal   = "Signal Settings"
+ema_fast     = input.int(8,    "Fast EMA",               minval=3,   maxval=50,  group=grp_signal)
+ema_slow     = input.int(21,   "Slow EMA",               minval=10,  maxval=200, group=grp_signal)
+rsi_len      = input.int(14,   "RSI Length",             minval=5,   maxval=30,  group=grp_signal)
+rsi_ob       = input.int(65,   "RSI Overbought",         minval=55,  maxval=80,  group=grp_signal)
+rsi_os       = input.int(35,   "RSI Oversold",           minval=20,  maxval=45,  group=grp_signal)
+atr_len      = input.int(14,   "ATR Length",             minval=5,   maxval=30,  group=grp_signal)
+vol_mult     = input.float(1.2,"Volume Spike Multiplier",minval=1.0, maxval=3.0, step=0.1, group=grp_signal)
+
+grp_risk     = "Risk / Reward"
+tp_pct       = input.float(80.0,"Take-Profit % (max 100)",  minval=10, maxval=100, step=5,  group=grp_risk)
+sl_pct       = input.float(76.0,"Stop-Loss % (liq ≈76)",    minval=10, maxval=76,  step=1,  group=grp_risk)
+trail_on     = input.bool(true, "Enable Trailing Stop",                                      group=grp_risk)
+trail_pct    = input.float(25.0,"Trail Offset %",            minval=5,  maxval=60,  step=5,  group=grp_risk)
+
+grp_fee      = "Fee Simulation"
+hold_bars    = input.int(1,    "Estimated Hold (bars)",  minval=1, maxval=10, group=grp_fee)
+show_net     = input.bool(true,"Show Net PnL Labels",                         group=grp_fee)
+
+grp_filter   = "Filters"
+trend_filter = input.bool(true,"Trend Filter (EMA200)",        group=grp_filter)
+vol_filter   = input.bool(true,"Volume Spike Filter",          group=grp_filter)
+adx_filter   = input.bool(true,"ADX Trend Strength Filter",    group=grp_filter)
+adx_thresh   = input.int(20,  "Min ADX", minval=10, maxval=40, group=grp_filter)
+
+// ─────────────────────────────────────────────────────────────
+// ░░  INDICATORS
+// ─────────────────────────────────────────────────────────────
+ema_f  = ta.ema(close, ema_fast)
+ema_s  = ta.ema(close, ema_slow)
+ema200 = ta.ema(close, 200)
+rsi    = ta.rsi(close, rsi_len)
+atr    = ta.atr(atr_len)
+
+[diplus, diminus, adx_val] = ta.dmi(14, 14)
+
+vol_avg   = ta.sma(volume, 20)
+vol_spike = volume > vol_avg * vol_mult
+
+// ─────────────────────────────────────────────────────────────
+// ░░  FEE MODEL
+// Closing fee: 50% → 20% linearly over 30 seconds, floor 20%
+// ─────────────────────────────────────────────────────────────
+close_fee_pct(bars) =>
+    elapsed_sec = bars * timeframe.multiplier * 60.0
+    math.max(20.0, 50.0 - elapsed_sec)
+
+cfee = close_fee_pct(hold_bars)
+
+// ─────────────────────────────────────────────────────────────
+// ░░  ENTRY CONDITIONS
+// ─────────────────────────────────────────────────────────────
+long_cross    = ta.crossover(ema_f, ema_s)
+long_rsi      = rsi > 50 and rsi < rsi_ob
+long_momentum = close > close[1] and close[1] > close[2]
+long_trend    = not trend_filter or close > ema200
+long_vol      = not vol_filter   or vol_spike
+long_adx      = not adx_filter   or adx_val >= adx_thresh
+long_candle   = close > open
+
+long_signal   = long_cross and long_rsi and long_momentum and long_trend and long_vol and long_adx and long_candle
+
+short_cross    = ta.crossunder(ema_f, ema_s)
+short_rsi      = rsi < 50 and rsi > rsi_os
+short_momentum = close < close[1] and close[1] < close[2]
+short_trend    = not trend_filter or close < ema200
+short_vol      = not vol_filter   or vol_spike
+short_adx      = not adx_filter   or adx_val >= adx_thresh
+short_candle   = close < open
+
+short_signal   = short_cross and short_rsi and short_momentum and short_trend and short_vol and short_adx and short_candle
+
+// ─────────────────────────────────────────────────────────────
+// ░░  CONTINUATION ENTRIES
+// ─────────────────────────────────────────────────────────────
+long_cont  = ema_f > ema_s and rsi > 55 and rsi < rsi_ob and diplus > diminus and long_candle and (not vol_filter or vol_spike) and (not trend_filter or close > ema200)
+short_cont = ema_f < ema_s and rsi < 45 and rsi > rsi_os and diminus > diplus and short_candle and (not vol_filter or vol_spike) and (not trend_filter or close < ema200)
+
+var bool in_long_cont  = false
+var bool in_short_cont = false
+
+long_entry_cont  = long_cont  and strategy.position_size <= 0 and not in_long_cont
+short_entry_cont = short_cont and strategy.position_size >= 0 and not in_short_cont
+
+if strategy.position_size > 0
+    in_long_cont  := true
+    in_short_cont := false
+else if strategy.position_size < 0
+    in_short_cont := true
+    in_long_cont  := false
+else
+    in_long_cont  := false
+    in_short_cont := false
+
+// ─────────────────────────────────────────────────────────────
+// ░░  ENTRIES
+// ─────────────────────────────────────────────────────────────
+if long_signal or long_entry_cont
+    strategy.entry("Long", strategy.long, comment="🚀 LONG")
+
+if short_signal or short_entry_cont
+    strategy.entry("Short", strategy.short, comment="🔻 SHORT")
+
+// ─────────────────────────────────────────────────────────────
+// ░░  EXITS  — FIX: trailing offset must be a plain float (ticks)
+// strategy.exit profit/loss params = price distance in points
+// trail_offset = price distance in points (NOT percent directly)
+// ─────────────────────────────────────────────────────────────
+tp_points    = strategy.position_avg_price * (tp_pct  / 100)
+sl_points    = strategy.position_avg_price * (sl_pct  / 100)
+trail_points = strategy.position_avg_price * (trail_pct / 100)
+
+if trail_on
+    strategy.exit("Exit Long",  from_entry="Long",
+         profit       = tp_points,
+         loss         = sl_points,
+         trail_offset = trail_points,
+         comment_profit = "✅ TP",
+         comment_loss   = "💥 LIQ")
+    strategy.exit("Exit Short", from_entry="Short",
+         profit       = tp_points,
+         loss         = sl_points,
+         trail_offset = trail_points,
+         comment_profit = "✅ TP",
+         comment_loss   = "💥 LIQ")
+else
+    strategy.exit("Exit Long",  from_entry="Long",
+         profit       = tp_points,
+         loss         = sl_points,
+         comment_profit = "✅ TP",
+         comment_loss   = "💥 LIQ")
+    strategy.exit("Exit Short", from_entry="Short",
+         profit       = tp_points,
+         loss         = sl_points,
+         comment_profit = "✅ TP",
+         comment_loss   = "💥 LIQ")
+
+// Early exit on EMA flip
+if ta.crossunder(ema_f, ema_s) and strategy.position_size > 0
+    strategy.close("Long",  comment="⚡ EMA Flip")
+if ta.crossover(ema_f, ema_s)  and strategy.position_size < 0
+    strategy.close("Short", comment="⚡ EMA Flip")
+
+// ─────────────────────────────────────────────────────────────
+// ░░  NET PnL LABELS
+// ─────────────────────────────────────────────────────────────
+if show_net and (long_signal or long_entry_cont)
+    net_tp = tp_pct - tp_pct * (cfee / 100) - 4.0
+    net_sl = -(sl_pct + 4.0)
+    label.new(bar_index, low,
+         text      = "NET TP≈" + str.tostring(math.round(net_tp, 1)) + "% | NET SL≈" + str.tostring(math.round(net_sl, 1)) + "%\nClose fee≈" + str.tostring(math.round(cfee, 0)) + "% of profit",
+         color     = color.new(color.green, 20),
+         textcolor = color.white,
+         style     = label.style_label_up,
+         size      = size.small)
+
+if show_net and (short_signal or short_entry_cont)
+    net_tp = tp_pct - tp_pct * (cfee / 100) - 4.0
+    net_sl = -(sl_pct + 4.0)
+    label.new(bar_index, high,
+         text      = "NET TP≈" + str.tostring(math.round(net_tp, 1)) + "% | NET SL≈" + str.tostring(math.round(net_sl, 1)) + "%\nClose fee≈" + str.tostring(math.round(cfee, 0)) + "% of profit",
+         color     = color.new(color.red, 20),
+         textcolor = color.white,
+         style     = label.style_label_down,
+         size      = size.small)
+
+// ─────────────────────────────────────────────────────────────
+// ░░  PLOTS
+// ─────────────────────────────────────────────────────────────
+plot(ema_f,  "EMA Fast", color=color.new(color.aqua,   0), linewidth=1)
+plot(ema_s,  "EMA Slow", color=color.new(color.orange, 0), linewidth=1)
+plot(ema200, "EMA 200",  color=color.new(color.gray,  40), linewidth=2)
+
+plotshape(long_signal  or long_entry_cont,  title="Long Entry",  location=location.belowbar, style=shape.triangleup,   color=color.lime, size=size.small)
+plotshape(short_signal or short_entry_cont, title="Short Entry", location=location.abovebar, style=shape.triangledown, color=color.red,  size=size.small)
+
+bgcolor(strategy.position_size > 0 ? color.new(color.green, 90) : strategy.position_size < 0 ? color.new(color.red, 90) : na, title="Position BG")
+
+// ─────────────────────────────────────────────────────────────
+// ░░  INFO TABLE
+// ─────────────────────────────────────────────────────────────
+var table info = table.new(position.top_right, 2, 9,
+     bgcolor      = color.new(color.black, 60),
+     border_width = 1,
+     border_color = color.new(color.gray, 50),
+     frame_width  = 1,
+     frame_color  = color.new(color.gray, 30))
+
+if barstate.islast
+    table.cell(info, 0, 0, "ROCKET PERPS",      text_color=color.yellow, text_size=size.small, bgcolor=color.new(color.navy, 40))
+    table.cell(info, 1, 0, "DefiApp / Aark",    text_color=color.yellow, text_size=size.small, bgcolor=color.new(color.navy, 40))
+    table.cell(info, 0, 1, "Leverage",           text_color=color.white,  text_size=size.small)
+    table.cell(info, 1, 1, "1000×",             text_color=color.lime,   text_size=size.small)
+    table.cell(info, 0, 2, "Opening Fee",        text_color=color.white,  text_size=size.small)
+    table.cell(info, 1, 2, "4% + $0.20",        text_color=color.orange, text_size=size.small)
+    table.cell(info, 0, 3, "Closing Fee",        text_color=color.white,  text_size=size.small)
+    table.cell(info, 1, 3, "20-50% of profit",  text_color=color.orange, text_size=size.small)
+    table.cell(info, 0, 4, "Liq Threshold",      text_color=color.white,  text_size=size.small)
+    table.cell(info, 1, 4, "76% margin loss",    text_color=color.red,    text_size=size.small)
+    table.cell(info, 0, 5, "TP Target",          text_color=color.white,  text_size=size.small)
+    table.cell(info, 1, 5, str.tostring(tp_pct) + "%", text_color=color.lime, text_size=size.small)
+    table.cell(info, 0, 6, "Est. Close Fee",     text_color=color.white,  text_size=size.small)
+    table.cell(info, 1, 6, str.tostring(math.round(cfee, 1)) + "%", text_color=color.orange, text_size=size.small)
+    table.cell(info, 0, 7, "ADX",                text_color=color.white,  text_size=size.small)
+    table.cell(info, 1, 7, str.tostring(math.round(adx_val, 1)), text_color=adx_val >= adx_thresh ? color.lime : color.red, text_size=size.small)
+    table.cell(info, 0, 8, "RSI",                text_color=color.white,  text_size=size.small)
+    table.cell(info, 1, 8, str.tostring(math.round(rsi, 1)), text_color=rsi > rsi_ob ? color.red : rsi < rsi_os ? color.lime : color.white, text_size=size.small)
