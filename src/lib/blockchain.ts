@@ -68,8 +68,8 @@ export const isWhitelisted = (address: string | undefined): boolean => {
 
 
 /** Cost for 24-hour unlimited streaming access (in RITUAL) */
-export const PAYMENT_AMOUNT_ETH = '0.05';
-export const PAYMENT_AMOUNT_RITUAL = '0.05';
+export const PAYMENT_AMOUNT_ETH = '0.01';
+export const PAYMENT_AMOUNT_RITUAL = '0.01';
 
 /** Cost in wei for smart contract / transaction value */
 export const PAYMENT_AMOUNT_WEI = parseEther(PAYMENT_AMOUNT_RITUAL);
@@ -81,7 +81,7 @@ export const RITUAL_CHAIN_ID = 1979;
 export const ACCESS_DURATION_MS = 24 * 60 * 60 * 1000;
 
 /** Display price string (used in UI) */
-export const DISPLAY_PRICE = '0.05 RIT';
+export const DISPLAY_PRICE = '0.01 RIT';
 
 // ============================================================================
 // Public Client (for read-only on-chain queries)

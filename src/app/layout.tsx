@@ -25,8 +25,8 @@ export const metadata: Metadata = {
   creator: "RitualStream",
   publisher: "RitualStream",
   icons: {
-    icon: "/favicon.png",
-    apple: "/favicon.png",
+    icon: "/ritual-translucent.png",
+    apple: "/ritual-translucent.png",
   },
   formatDetection: {
     email: false,
