@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# unwanted files
+basestream-main.code-workspace
+*.pine
+test_exit.html
