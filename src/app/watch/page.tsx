@@ -19,6 +19,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAccount } from 'wagmi';
 
 import AccessGate from '@/components/AccessGate';
 import CountdownTimer from '@/components/CountdownTimer';
@@ -62,7 +63,8 @@ const categories = [
 
 function WatchContent() {
   const router = useRouter();
-  const { hasAccess, timeRemaining, timeFormatted, accessData } = useAccess(true);
+  const { address } = useAccount();
+  const { hasAccess, timeRemaining, timeFormatted, accessData } = useAccess(true, address);
 
   return (
     <div className="min-h-screen bg-base-black text-white">

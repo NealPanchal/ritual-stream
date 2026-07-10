@@ -124,6 +124,13 @@ export default function TVDetailPage() {
     setShowPlayer(true);
   }, [hasAccess, router]);
 
+  useEffect(() => {
+    if (showPlayer && !hasAccess) {
+      setShowPlayer(false);
+      router.push('/unlock');
+    }
+  }, [showPlayer, hasAccess, router]);
+
 
 
   const handlePlayerLoad = useCallback(() => {

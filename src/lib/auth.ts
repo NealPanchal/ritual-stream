@@ -135,8 +135,12 @@ export async function checkAccess(walletAddress?: string): Promise<AccessStatus>
       return { isValid: false, data: null, timeRemaining: 0 };
     }
 
+    if (!walletAddress) {
+      return { isValid: false, data: null, timeRemaining: 0 };
+    }
+
     // VIP WHITELIST CHECK: Direct lifetime access for specific addresses
-    if (walletAddress && isWhitelisted(walletAddress)) {
+    if (isWhitelisted(walletAddress)) {
       return {
         isValid: true,
         data: {

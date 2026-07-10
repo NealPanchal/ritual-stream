@@ -110,6 +110,13 @@ export default function MovieDetailPage() {
     setShowPlayer(true);
   }, [hasAccess, router]);
 
+  useEffect(() => {
+    if (showPlayer && !hasAccess) {
+      setShowPlayer(false);
+      router.push('/unlock');
+    }
+  }, [showPlayer, hasAccess, router]);
+
   const hasAutoPlayedRef = useRef(false);
 
   // Instantly open the player overlay if the user already has an active pass (only once)
