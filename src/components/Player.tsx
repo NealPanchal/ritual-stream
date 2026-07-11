@@ -256,7 +256,6 @@ const Player = ({ id, type, season, episode, title, onProgress, onEnded }: Playe
         className="w-full h-full min-h-[500px] border-0"
         allowFullScreen
         allow="autoplay; encrypted-media; gyroscope; picture-in-picture"
-        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
         onLoad={() => setIsLoading(false)}
         onError={() => {
           setError('Failed to load player');
