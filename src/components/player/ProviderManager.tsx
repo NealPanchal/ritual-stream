@@ -124,7 +124,7 @@ export const ProviderManager = memo(function ProviderManager({
           ref={iframeRef}
           key={iframeKey}
           src={stream.embedUrl}
-          className="w-full h-full border-0"
+          className="w-full h-full absolute inset-0 border-0"
           style={{ zIndex: 1 }}
           allowFullScreen
           allow="autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
