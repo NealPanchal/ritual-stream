@@ -128,7 +128,6 @@ export const ProviderManager = memo(function ProviderManager({
           style={{ zIndex: 1 }}
           allowFullScreen
           allow="autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-          sandbox="allow-same-origin allow-scripts allow-forms allow-presentation"
           onLoad={stream.handleIframeLoad}
           onError={stream.handleIframeError}
           title={title}
