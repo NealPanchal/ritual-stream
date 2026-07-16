@@ -52,6 +52,9 @@ import '@rainbow-me/rainbowkit/styles.css';
 const config = getDefaultConfig({
   appName: 'RitualStream',
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'ritualstream_demo_project',
+  appDescription: 'Stream Movies & TV Shows securely on Ritual Chain',
+  appUrl: 'https://www.ritualstream.fun',
+  appIcon: 'https://www.ritualstream.fun/favicon.ico',
   chains: [ritualChain],
   ssr: true,
 });
