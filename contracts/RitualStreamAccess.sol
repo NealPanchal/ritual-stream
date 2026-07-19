@@ -88,6 +88,27 @@ contract RitualStreamAccess {
     }
 
     /**
+     * @notice Explicit payable function to purchase access
+     * @dev Calling this avoids the MetaMask "Caution: Raw transfer to contract" warning.
+     * Payments from addresses with existing unexpired access extend their pass.
+     */
+    function purchaseAccess() external payable whenNotPaused {
+        if (msg.value != PASS_COST) revert InvalidPayment();
+
+        uint64 currentExpiry = accessExpiry[msg.sender];
+        uint64 newExpiry;
+
+        if (currentExpiry > block.timestamp) {
+            newExpiry = currentExpiry + uint64(PASS_DURATION);
+        } else {
+            newExpiry = uint64(block.timestamp + PASS_DURATION);
+        }
+
+        accessExpiry[msg.sender] = newExpiry;
+        emit PassUnlocked(msg.sender, newExpiry);
+    }
+
+    /**
      * @notice Zero-calldata payment handler
      * @dev Send exactly 0.001 RITUAL here to unlock 24-hour streaming access.
      * Payments from addresses with existing unexpired access extend their pass.

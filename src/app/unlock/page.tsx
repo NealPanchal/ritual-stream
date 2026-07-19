@@ -26,7 +26,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useChainId, useSwitchChain, useSignMessage } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain, useSignMessage } from 'wagmi';
 import { parseEther } from 'viem';
 
 import WalletConnect from '@/components/WalletConnect';
@@ -43,6 +43,7 @@ import {
   verifyTransaction,
   isWhitelisted,
   basePublicClient,
+  BASE_STREAM_ACCESS_ABI,
 } from '@/lib/blockchain';
 
 // ============================================================================
@@ -110,7 +111,7 @@ export default function UnlockPage() {
   // wagmi hooks
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
-  const { sendTransactionAsync } = useSendTransaction();
+  const { writeContractAsync } = useWriteContract();
   const { signMessageAsync } = useSignMessage();
 
   // Wait for transaction receipt
@@ -155,18 +156,22 @@ export default function UnlockPage() {
 
       // 2. Pre-flight Gas Estimation (prevents wallet bloat on revert)
       try {
-        await basePublicClient.estimateGas({
+        await basePublicClient.estimateContractGas({
           account: address as `0x${string}`,
-          to: PAYMENT_ADDRESS,
+          address: PAYMENT_ADDRESS,
+          abi: BASE_STREAM_ACCESS_ABI,
+          functionName: 'purchaseAccess',
           value: parseEther(PAYMENT_AMOUNT_ETH),
         });
       } catch (estimateError: any) {
         console.warn('[RitualStream] Gas estimation failed, contract might revert:', estimateError);
       }
 
-      // 3. Send ETH to the correct recipient address
-      const hash = await sendTransactionAsync({
-        to: PAYMENT_ADDRESS,
+      // 3. Send transaction calling purchaseAccess
+      const hash = await writeContractAsync({
+        address: PAYMENT_ADDRESS,
+        abi: BASE_STREAM_ACCESS_ABI,
+        functionName: 'purchaseAccess',
         value: parseEther(PAYMENT_AMOUNT_ETH),
       });
 

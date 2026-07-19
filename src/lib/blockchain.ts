@@ -241,6 +241,13 @@ export const BASE_STREAM_ACCESS_ABI = [ // RitualStreamAccess ABI
   },
   {
     "inputs": [],
+    "name": "purchaseAccess",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "resumePayments",
     "outputs": [],
     "stateMutability": "nonpayable",
