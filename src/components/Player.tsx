@@ -254,6 +254,7 @@ const Player = ({ id, type, season, episode, title, onProgress, onEnded }: Playe
         ref={iframeRef}
         src={embedUrl}
         className="w-full h-full absolute inset-0 min-h-[500px] border-0"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         allowFullScreen
         allow="autoplay; encrypted-media; gyroscope; picture-in-picture"
         onLoad={() => setIsLoading(false)}

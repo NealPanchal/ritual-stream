@@ -612,9 +612,15 @@ export default function UnlockPage() {
                               <span>Unlock 24-Hour Access</span>
                             </motion.button>
 
-                            <div className="flex items-center justify-center gap-2 text-xs text-gray-600">
-                              <Shield size={12} />
-                              <span>Secured by Base blockchain</span>
+                            <div className="flex flex-col items-center justify-center gap-1.5 text-[11px] text-gray-500 mt-2">
+                              <div className="flex items-center gap-1.5">
+                                <Shield size={12} className="text-emerald-500/70" />
+                                <span>Secured by Ritual Chain Testnet</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span>✓ No Tracking Cookies</span>
+                                <span>✓ 100% Self-Custodial</span>
+                              </div>
                             </div>
                           </>
                         )}

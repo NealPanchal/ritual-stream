@@ -126,6 +126,7 @@ export const ProviderManager = memo(function ProviderManager({
           src={stream.embedUrl}
           className="w-full h-full absolute inset-0 border-0"
           style={{ zIndex: 1 }}
+          sandbox={stream.currentProvider === 'streamimdb' ? undefined : "allow-scripts allow-same-origin allow-forms allow-presentation"}
           allowFullScreen
           allow="autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
           onLoad={stream.handleIframeLoad}
